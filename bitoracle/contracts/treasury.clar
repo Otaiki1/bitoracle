@@ -1,29 +1,35 @@
-;; title: treasury
-;; version:
-;; summary:
-;; description:
+;; treasury.clar
+;; BitOracle - Protocol Treasury
+;; Holds protocol fees from settled markets
 
-;; traits
-;;
+(define-constant CONTRACT-OWNER tx-sender)
+(define-constant ERR-UNAUTHORIZED (err u300))
+(define-constant ERR-ZERO-AMOUNT (err u301))
 
-;; token definitions
-;;
+;; Total fees collected (informational)
+(define-data-var total-fees-collected uint u0)
 
-;; constants
-;;
+;; Read current sBTC balance held by treasury
+(define-read-only (get-balance)
+  (contract-call? .sbtc-token get-balance (as-contract tx-sender))
+)
 
-;; data vars
-;;
+;; Read total fees ever collected
+(define-read-only (get-total-fees-collected)
+  (var-get total-fees-collected)
+)
 
-;; data maps
-;;
-
-;; public functions
-;;
-
-;; read only functions
-;;
-
-;; private functions
-;;
-
+;; Owner can withdraw accumulated fees
+(define-public (withdraw (amount uint) (recipient principal))
+  (begin
+    (asserts! (is-eq tx-sender CONTRACT-OWNER) ERR-UNAUTHORIZED)
+    (asserts! (> amount u0) ERR-ZERO-AMOUNT)
+    (try! (as-contract (contract-call? .sbtc-token transfer
+      amount
+      tx-sender
+      recipient
+      none
+    )))
+    (ok true)
+  )
+)
