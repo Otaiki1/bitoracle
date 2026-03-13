@@ -1,0 +1,7 @@
+{
+  "hooks": [
+    { "name": "check-clarity-functions", "path": "check-clarity-functions.js" },
+    { "name": "check-stacks-init", "path": "check-stacks-init.js" },
+    { "name": "enforce-knowledge", "path": "enforce-knowledge.js" }
+  ]
+}

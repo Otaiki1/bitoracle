@@ -1,0 +1,43 @@
+[project]
+name = 'bitoracle'
+description = ''
+authors = []
+telemetry = true
+cache_dir = './.cache'
+requirements = []
+[contracts.oracle-adapter]
+path = 'contracts/oracle-adapter.clar'
+clarity_version = 3
+epoch = 'latest'
+
+[contracts.prediction-market]
+path = 'contracts/prediction-market.clar'
+clarity_version = 3
+epoch = 'latest'
+
+[contracts.sbtc-token]
+path = 'contracts/sbtc-token.clar'
+clarity_version = 3
+epoch = 'latest'
+
+[contracts.settlement-engine]
+path = 'contracts/settlement-engine.clar'
+clarity_version = 3
+epoch = 'latest'
+
+[contracts.treasury]
+path = 'contracts/treasury.clar'
+clarity_version = 3
+epoch = 'latest'
+[repl.analysis]
+passes = ['check_checker']
+
+[repl.analysis.check_checker]
+strict = false
+trusted_sender = false
+trusted_caller = false
+callee_filter = false
+
+[repl.remote_data]
+enabled = false
+api_url = 'https://api.hiro.so'
