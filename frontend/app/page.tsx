@@ -22,9 +22,15 @@ function Dashboard() {
         const val = price / 1e8;
         setCurrentPrice(price);
         setChartData(prev => {
-          const newPoint = { time: Math.floor(Date.now() / 1000), value: val };
-          const newData = [...prev, newPoint].slice(-100);
-          return newData;
+          const lastPoint = prev[prev.length - 1];
+          const now = Math.floor(Date.now() / 1000);
+          
+          if (lastPoint && lastPoint.time === now) {
+            return prev;
+          }
+          
+          const newPoint = { time: now, value: val };
+          return [...prev, newPoint].slice(-100);
         });
       }
     };

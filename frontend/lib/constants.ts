@@ -14,7 +14,7 @@ export const SBTC_CONTRACT = {
     ? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ'  // mainnet sBTC
     : 'ST1KA46BB5FK702F47BFKJ13BBVTKPV8SV0YC4QR7', // updated testnet principal
   name: 'bo-sbtc-v5',
-  tokenName: 'sBTC',
+  tokenName: 'sbtc',
 };
 
 export const HIRO_API_URL = IS_MAINNET

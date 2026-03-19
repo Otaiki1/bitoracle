@@ -7,7 +7,7 @@ import { PAYOUT_RATES } from '@/lib/constants';
 import { TrendingUp, TrendingDown, Clock, ShieldCheck } from 'lucide-react';
 
 export function TradePanel() {
-  const { connected, connect } = useWallet();
+  const { connected, connect, address } = useWallet();
   const [direction, setDirection] = useState<boolean | null>(null);
   const [timeframe, setTimeframe] = useState<number>(2); // Default to 1m
   const [amount, setAmount] = useState('0.001');
@@ -16,25 +16,40 @@ export function TradePanel() {
 
   useEffect(() => {
     const fetchPrice = async () => {
-      const price = await getBTCPrice();
-      if (price > 0) setCurrentPrice(price);
+      try {
+        const response = await fetch('https://hermes.pyth.network/v2/updates/price/latest?ids[]=0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43&parsed=true');
+        const data = await response.json();
+        if (data && data.parsed && data.parsed.length > 0) {
+          const priceUpdate = data.parsed[0].price;
+          const price = parseFloat(priceUpdate.price) * Math.pow(10, priceUpdate.expo + 8);
+          if (price > 0) setCurrentPrice(price);
+        }
+      } catch (error) {
+        console.error("Failed to fetch BTC price from Pyth:", error);
+      }
     };
     fetchPrice();
     const interval = setInterval(fetchPrice, 5000);
     return () => clearInterval(interval);
   }, []);
 
-  const handleSubmit = async () => {
-    if (direction === null || !amount || !connected || currentPrice === 0) return;
+  const handleSubmit = async (tradeDirection: boolean) => {
+    console.log('STUB: handleSubmit called', { tradeDirection, amount, connected, currentPrice, address });
+    if (!amount || !connected || currentPrice === 0 || !address) {
+      console.warn('STUB: missing requirements', { amount, connected, currentPrice, address });
+      return;
+    }
     
     setLoading(true);
+    setDirection(tradeDirection);
     try {
       const amountSats = Math.round(parseFloat(amount) * 1e8);
-      await placeTrade(direction, timeframe, amountSats, currentPrice);
+      await placeTrade(tradeDirection, timeframe, amountSats, currentPrice, address);
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
+      setDirection(null);
     }
   };
 
@@ -126,8 +141,8 @@ export function TradePanel() {
           {connected ? (
             <>
               <button
-                onClick={() => setDirection(true)}
-                disabled={loading || currentPrice === 0}
+                onClick={() => handleSubmit(true)}
+                disabled={loading}
                 className="w-full group relative py-5 bg-[#00c076] hover:bg-[#00d086] text-white rounded-[1.25rem] font-black text-xl shadow-lg shadow-green-500/20 transition-all active:scale-[0.98] overflow-hidden"
               >
                 <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent pointer-events-none" />
@@ -138,8 +153,8 @@ export function TradePanel() {
               </button>
               
               <button
-                onClick={() => setDirection(false)}
-                disabled={loading || currentPrice === 0}
+                onClick={() => handleSubmit(false)}
+                disabled={loading}
                 className="w-full group relative py-5 bg-[#ff4d4d] hover:bg-[#ff5d5d] text-white rounded-[1.25rem] font-black text-xl shadow-lg shadow-red-500/20 transition-all active:scale-[0.98] overflow-hidden"
               >
                 <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent pointer-events-none" />
