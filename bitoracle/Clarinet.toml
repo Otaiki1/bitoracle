@@ -5,28 +5,23 @@ authors = []
 telemetry = true
 cache_dir = './.cache'
 requirements = []
-[contracts.oracle-adapter]
+[contracts.bo-oracle-v5]
 path = 'contracts/oracle-adapter.clar'
 clarity_version = 3
 epoch = 'latest'
 
-[contracts.prediction-market]
-path = 'contracts/prediction-market.clar'
+[contracts.bo-engine-v5]
+path = 'contracts/trade-engine.clar'
 clarity_version = 3
 epoch = 'latest'
 
-[contracts.sbtc-token]
+[contracts.bo-sbtc-v5]
 path = 'contracts/sbtc-token.clar'
 clarity_version = 3
 epoch = 'latest'
 
-[contracts.settlement-engine]
-path = 'contracts/settlement-engine.clar'
-clarity_version = 3
-epoch = 'latest'
-
-[contracts.treasury]
-path = 'contracts/treasury.clar'
+[contracts.bo-vault-v5]
+path = 'contracts/liquidity-vault.clar'
 clarity_version = 3
 epoch = 'latest'
 [repl.analysis]

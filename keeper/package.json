@@ -4,16 +4,23 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start": "node --no-warnings=ExperimentalWarning --loader ts-node/esm index.ts",
+    "seed:testnet": "node --no-warnings=ExperimentalWarning --loader ts-node/esm seed-testnet.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "dependencies": {
-    "@pythnetwork/price-service-client": "^1.11.0",
+    "@stacks/api": "^6.11.4-pr.472091f.0",
     "@stacks/network": "^7.3.1",
     "@stacks/transactions": "^7.3.1",
+    "@stacks/wallet-sdk": "^7.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "dotenv": "^17.3.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   }

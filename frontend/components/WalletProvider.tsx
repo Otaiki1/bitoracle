@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { AppConfig, UserSession, showConnect } from '@stacks/connect';
+import { AppConfig, UserSession, authenticate } from '@stacks/connect';
 import { NETWORK } from '@/lib/constants';
 
 interface WalletContextType {
@@ -29,7 +29,13 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const connect = () => {
-    showConnect({
+    console.log('Attempting to connect wallet...');
+    if (typeof authenticate !== 'function') {
+      console.error('authenticate is not a function!', authenticate);
+      return;
+    }
+    
+    authenticate({
       appDetails: {
         name: 'BitOracle',
         icon: '/logo.png',
@@ -49,7 +55,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     setConnected(false);
   };
 
-  const address = connected ? (NETWORK.isMainnet() ? userData.profile.stxAddress.mainnet : userData.profile.stxAddress.testnet) : null;
+  const address = connected 
+    ? (NETWORK.chainId === 1 ? userData.profile.stxAddress.mainnet : userData.profile.stxAddress.testnet) 
+    : null;
 
   return (
     <WalletContext.Provider value={{ userSession, userData, connected, connect, disconnect, address }}>

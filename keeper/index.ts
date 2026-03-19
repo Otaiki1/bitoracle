@@ -1,45 +1,82 @@
 // keeper/index.ts
-import { StacksTestnet } from '@stacks/network';
+import { STACKS_TESTNET } from '@stacks/network';
 import {
   makeContractCall,
   uintCV,
   broadcastTransaction,
   AnchorMode,
 } from '@stacks/transactions';
-import { getBTCPrice } from './oracle';
-import { getMockBTCPrice } from './mockOracle';
-import { getLatestBlock } from './stacks';
+import { getBTCPrice } from './oracle.ts';
+import { getMockBTCPrice } from './mockOracle.ts';
+import { getLatestBlock, getTradeCounter, getTrade, getPrivateKeyFromMnemonic } from './stacks.ts';
+
 import * as dotenv from 'dotenv';
 
 dotenv.config();
 
-const KEEPER_PRIVATE_KEY = process.env.KEEPER_PRIVATE_KEY!;
-const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS!;
-const NETWORK = new StacksTestnet();
+const RAW_KEY = process.env.KEEPER_PRIVATE_KEY;
+const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS;
+const NETWORK = STACKS_TESTNET;
+
+if (!RAW_KEY || !CONTRACT_ADDRESS) {
+  console.error('❌ Error: KEEPER_PRIVATE_KEY or CONTRACT_ADDRESS missing in .env');
+  process.exit(1);
+}
+
+console.log(`Configured for Contract: ${CONTRACT_ADDRESS}`);
+console.log(`Network: ${NETWORK.client.baseUrl}`);
+
+let resolvedPrivateKey: string;
 
 async function keeperLoop() {
-  console.log('BitOracle keeper bot started...');
+  console.log('BitOracle keeper bot started — monitoring individual trades...');
+  try {
+    resolvedPrivateKey = await getPrivateKeyFromMnemonic(RAW_KEY!);
+    console.log('✅ Private key resolved successfully.');
+  } catch (e: any) {
+    console.error('❌ Failed to resolve private key:', e);
+    process.exit(1);
+  }
 
   while (true) {
     try {
-      await checkAndSettle();
+      await settleExpiredTrades();
     } catch (err: any) {
-      console.error('Keeper error:', err.message);
+      console.error('⚠️ Keeper Loop Warning:', err.message || err);
     }
 
     await sleep(10_000);
   }
 }
 
-async function checkAndSettle() {
+async function settleExpiredTrades() {
   const currentBlock = await getLatestBlock();
-  console.log(`Current Block: ${currentBlock}`);
-  
-  // Logic to fetch and check rounds...
-  // For demo purposes, this would iterate through rounds and call settleRound(id)
+  const totalTrades = await getTradeCounter();
+
+  console.log(`Block ${currentBlock}: scanning last trades... (Total: ${totalTrades})`);
+
+  // Scan last 50 trades for demo purposes
+  const SCAN_WINDOW = 50;
+  const startId = Math.max(1, totalTrades - SCAN_WINDOW + 1);
+
+  for (let tradeId = startId; tradeId <= totalTrades; tradeId++) {
+    const trade = await getTrade(tradeId);
+
+    if (!trade) continue;
+    if (trade.status !== 0) continue; // skip already settled
+    
+    if (currentBlock < trade.expiryBlock) {
+      // Not yet expired
+      continue;
+    }
+
+    // Trade has expired — settle it
+    console.log(`Trade ${tradeId}: EXPIRED (at block ${trade.expiryBlock}) — settling...`);
+    await settleTrade(tradeId);
+  }
 }
 
-async function settleRound(roundId: number) {
+async function settleTrade(tradeId: number) {
   let price: bigint;
   try {
     const pyth = await getBTCPrice();
@@ -49,30 +86,30 @@ async function settleRound(roundId: number) {
     price = await getMockBTCPrice();
   }
 
-  console.log(`Settling round ${roundId} with price: ${price}`);
+  console.log(`Settling trade ${tradeId} with price: ${price}`);
 
   const txOptions = {
-    contractAddress: CONTRACT_ADDRESS,
-    contractName: 'settlement-engine',
-    functionName: 'settle-round',
+    contractAddress: CONTRACT_ADDRESS as string,
+    contractName: 'bo-engine-v5',
+    functionName: 'settle-trade',
     functionArgs: [
-      uintCV(roundId),
+      uintCV(tradeId),
       uintCV(price),
     ],
-    senderKey: KEEPER_PRIVATE_KEY,
+    senderKey: resolvedPrivateKey,
     network: NETWORK,
     anchorMode: AnchorMode.Any,
     fee: 5000,
   };
 
   const tx = await makeContractCall(txOptions);
-  const result = await broadcastTransaction(tx, NETWORK);
+  const result = await broadcastTransaction({ transaction: tx, network: NETWORK });
 
-  if (result.error) {
-    throw new Error(`Settlement failed: ${result.error}`);
+  if ('error' in result) {
+    throw new Error(`Settlement failed: ${result.error} (reason: ${result.reason})`);
   }
 
-  console.log(`Round ${roundId} settled! txid: ${result.txid}`);
+  console.log(`Trade ${tradeId} settled! txid: ${result.txid}`);
 }
 
 function sleep(ms: number) {
