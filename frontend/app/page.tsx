@@ -12,6 +12,7 @@ import { ChevronDown, Globe, Zap, TrendingUp, TrendingDown } from 'lucide-react'
 function Dashboard() {
   const { connected, connect, address } = useWallet();
   const [activeTrades, setActiveTrades] = useState<Trade[]>([]);
+  const [view, setView] = useState<'opened' | 'history'>('opened');
   const [chartData, setChartData] = useState<{ time: number; value: number }[]>([]);
   const [currentPrice, setCurrentPrice] = useState(0);
 
@@ -39,6 +40,67 @@ function Dashboard() {
     const interval = setInterval(fetchPrice, 5000);
     return () => clearInterval(interval);
   }, []);
+
+  // Settlement Logic: Check and settle trades locally
+  useEffect(() => {
+    const settleInterval = setInterval(() => {
+      const now = Math.floor(Date.now() / 1000);
+      let changed = false;
+
+      const updatedTrades = activeTrades.map(trade => {
+        if (trade.status === 0 && trade.expiryTime && now >= trade.expiryTime) {
+          changed = true;
+          // Determine outcome
+          const isWinner = trade.direction 
+            ? currentPrice > Number(trade.entryPrice)
+            : currentPrice < Number(trade.entryPrice);
+          
+          return {
+            ...trade,
+            status: isWinner ? 1 : 2,
+            payoutAmount: isWinner ? BigInt(Math.floor(Number(trade.stake) * (1 + 0.8))) : BigInt(0)
+          };
+        }
+        return trade;
+      });
+
+      if (changed) {
+        setActiveTrades(updatedTrades);
+      }
+    }, 1000);
+
+    return () => clearInterval(settleInterval);
+  }, [activeTrades, currentPrice]);
+
+  const handleTradePlaced = (direction: boolean, timeframe: number, stake: number, entryPrice: number) => {
+    const lastPoint = chartData[chartData.length - 1];
+    const entryTime = lastPoint ? lastPoint.time : Math.floor(Date.now() / 1000);
+    const durationSeconds = timeframe === 1 ? 30 : timeframe === 2 ? 60 : timeframe === 3 ? 300 : 900;
+    
+    const newTrade: Trade = {
+      id: Math.floor(Math.random() * 10000), 
+      trader: address || '',
+      direction,
+      stake: BigInt(stake),
+      entryPrice: BigInt(entryPrice),
+      closePrice: BigInt(0),
+      entryBlock: 0,
+      expiryBlock: 0,
+      timeframe,
+      payoutRate: 80,
+      status: 0,
+      payoutAmount: BigInt(0),
+      claimed: false,
+      entryTime: entryTime,
+      expiryTime: entryTime + durationSeconds,
+    };
+
+    setActiveTrades(prev => [newTrade, ...prev]);
+  };
+
+  const filteredTrades = activeTrades.filter(t => 
+    view === 'opened' ? t.status === 0 : t.status !== 0
+  );
 
   return (
     <main className="min-h-screen bg-[#060709] text-white p-4 md:p-8 selection:bg-orange-500/30 font-sans">
@@ -123,7 +185,7 @@ function Dashboard() {
              </div>
 
              <div className="flex-1 p-2 relative">
-                <PriceChart data={chartData} />
+                <PriceChart data={chartData} trades={activeTrades} />
              </div>
           </div>
 
@@ -131,18 +193,28 @@ function Dashboard() {
             <div className="flex items-center justify-between px-4">
               <h2 className="text-sm font-black text-gray-500 uppercase tracking-widest">Trades Overview</h2>
               <div className="flex gap-4">
-                <button className="text-[10px] font-black text-orange-500 uppercase pb-1 border-b-2 border-orange-500">Opened</button>
-                <button className="text-[10px] font-black text-gray-600 uppercase pb-1 hover:text-gray-400 transition-all">History</button>
+                <button 
+                  onClick={() => setView('opened')}
+                  className={`text-[10px] font-black uppercase pb-1 transition-all ${view === 'opened' ? 'text-orange-500 border-b-2 border-orange-500' : 'text-gray-600 hover:text-gray-400'}`}
+                >
+                  Opened
+                </button>
+                <button 
+                  onClick={() => setView('history')}
+                  className={`text-[10px] font-black uppercase pb-1 transition-all ${view === 'history' ? 'text-orange-500 border-b-2 border-orange-500' : 'text-gray-600 hover:text-gray-400'}`}
+                >
+                  History
+                </button>
               </div>
             </div>
             <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
-              <TradeList trades={activeTrades} />
+              <TradeList trades={filteredTrades} />
             </div>
           </div>
         </div>
 
         <div className="lg:col-span-4 xl:col-span-3">
-          <TradePanel />
+          <TradePanel onTradePlaced={handleTradePlaced} />
         </div>
       </section>
 

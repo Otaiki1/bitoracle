@@ -36,4 +36,6 @@ export interface Trade {
   status: number; // 0=open, 1=won, 2=lost, 3=draw
   payoutAmount: bigint;
   claimed: boolean;
+  entryTime?: number; // unix timestamp for chart mapping
+  expiryTime?: number; // unix timestamp for countdown
 }

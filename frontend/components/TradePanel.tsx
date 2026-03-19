@@ -6,7 +6,7 @@ import { placeTrade, getBTCPrice } from '@/lib/stacks';
 import { PAYOUT_RATES } from '@/lib/constants';
 import { TrendingUp, TrendingDown, Clock, ShieldCheck } from 'lucide-react';
 
-export function TradePanel() {
+export function TradePanel({ onTradePlaced }: { onTradePlaced?: (dir: boolean, tf: number, stake: number, entry: number) => void }) {
   const { connected, connect, address } = useWallet();
   const [direction, setDirection] = useState<boolean | null>(null);
   const [timeframe, setTimeframe] = useState<number>(2); // Default to 1m
@@ -45,6 +45,9 @@ export function TradePanel() {
     try {
       const amountSats = Math.round(parseFloat(amount) * 1e8);
       await placeTrade(tradeDirection, timeframe, amountSats, currentPrice, address);
+      if (onTradePlaced) {
+        onTradePlaced(tradeDirection, timeframe, amountSats, currentPrice);
+      }
     } catch (e) {
       console.error(e);
     } finally {

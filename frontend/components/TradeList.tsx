@@ -4,6 +4,7 @@ import React from 'react';
 import { Trade } from '@/types';
 import { TrendingUp, TrendingDown, Clock, ExternalLink } from 'lucide-react';
 import { PAYOUT_RATES } from '@/lib/constants';
+import { Countdown } from './Countdown';
 
 interface TradeListProps {
   trades: Trade[];
@@ -46,18 +47,18 @@ export function TradeList({ trades }: TradeListProps) {
               </div>
             </div>
             
-            <div className="text-right">
+            <div className="text-right flex flex-col items-end">
               {trade.status === 0 ? (
-                <div className="flex items-center gap-2 text-orange-500 text-xs font-bold bg-orange-500/10 px-3 py-1.5 rounded-full">
-                  <Clock size={12} className="animate-spin" />
-                  PENDING
+                <div className="flex items-center gap-2 text-orange-500 text-[10px] font-bold bg-orange-500/10 px-3 py-1 rounded-full uppercase tracking-tighter">
+                  <Clock size={10} className="animate-spin" />
+                  Live Position
                 </div>
               ) : trade.status === 1 ? (
-                <div className="text-green-500 text-xs font-bold bg-green-500/10 px-3 py-1.5 rounded-full">
+                <div className="text-green-500 text-[10px] font-bold bg-green-500/10 px-3 py-1 rounded-full uppercase tracking-tighter">
                   WON +{PAYOUT_RATES[trade.timeframe as keyof typeof PAYOUT_RATES]}%
                 </div>
               ) : (
-                <div className="text-red-500 text-xs font-bold bg-red-500/10 px-3 py-1.5 rounded-full">
+                <div className="text-red-500 text-[10px] font-bold bg-red-500/10 px-3 py-1 rounded-full uppercase tracking-tighter">
                   LOSS
                 </div>
               )}
@@ -80,6 +81,11 @@ export function TradeList({ trades }: TradeListProps) {
               </p>
             </div>
           </div>
+          {trade.status === 0 && trade.expiryTime && (
+            <div className="mt-4 pt-4 border-t border-gray-800/50">
+              <Countdown expiryTime={trade.expiryTime} />
+            </div>
+          )}
         </div>
       ))}
     </div>
