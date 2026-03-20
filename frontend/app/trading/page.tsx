@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { WalletProvider, useWallet } from '@/components/WalletProvider';
 import { TradePanel } from '@/components/TradePanel';
 import { TradeList } from '@/components/TradeList';
@@ -164,15 +165,19 @@ function Dashboard() {
         <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-orange-600/5 blur-[120px] rounded-full" />
       </div>
 
-      <header className="flex justify-between items-center mb-8 relative z-10">
-        <div className="flex items-center gap-8">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center font-black text-xl italic shadow-lg shadow-orange-500/20">B</div>
-            <div>
-              <h1 className="text-xl font-black tracking-tighter text-white leading-none">BITORACLE</h1>
-              <p className="text-[10px] text-gray-500 font-bold tracking-widest uppercase mt-1">Binary Protocol</p>
+      <header className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8">
+        <div className="flex items-center gap-6">
+          <Link href="/" className="flex items-center gap-2 group cursor-pointer transition-all">
+            <img 
+              src="/bitoracle-logo.png" 
+              alt="BitOracle" 
+              className="h-10 w-auto rounded-xl group-hover:scale-110 transition-transform shadow-lg shadow-orange-500/10" 
+            />
+            <div className="flex flex-col leading-none">
+              <h1 className="text-2xl font-black italic tracking-tighter text-white uppercase">BITORACLE</h1>
+              <span className="text-[10px] text-orange-500 font-bold tracking-[0.3em] ml-1 uppercase">ORACLE PROTOCOL</span>
             </div>
-          </div>
+          </Link>
 
           <nav className="hidden lg:flex items-center gap-1 bg-gray-900/50 p-1 rounded-xl border border-gray-800/50">
              <button 
@@ -295,6 +300,19 @@ function Dashboard() {
           onClose={() => setResultModal(null)}
         />
       )}
+
+      <footer className="mt-12 py-8 border-t border-gray-800/20 flex flex-col md:flex-row justify-between items-center gap-6 relative z-10">
+        <Link href="/" className="flex items-center gap-2 group transition-all">
+          <img src="/bitoracle-logo.png" alt="Logo" className="h-8 w-auto rounded-lg group-hover:scale-110 transition-transform" />
+          <h1 className="text-sm font-black tracking-tighter text-white uppercase italic">BITORACLE</h1>
+        </Link>
+        <div className="flex gap-8 text-[10px] font-black text-gray-600 uppercase tracking-widest">
+           <Link href="#" className="hover:text-white transition-colors">Documentation</Link>
+           <Link href="#" className="hover:text-white transition-colors">Support</Link>
+           <Link href="#" className="hover:text-white transition-colors">Privacy</Link>
+        </div>
+        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">© 2026 BitOracle Binary Protocol</p>
+      </footer>
 
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar {

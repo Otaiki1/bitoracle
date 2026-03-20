@@ -27,10 +27,14 @@ export default function LandingPage() {
         scrolled ? 'bg-[#060709]/80 backdrop-blur-xl border-b border-white/5 py-4' : 'bg-transparent py-6'
       }`}>
         <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
-          <div className="flex items-center gap-2 group cursor-pointer">
-            <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center font-black text-xl italic shadow-lg shadow-orange-500/20 group-hover:scale-110 transition-transform">B</div>
+          <Link href="/" className="flex items-center gap-2 group cursor-pointer">
+            <img 
+              src="/bitoracle-logo.png" 
+              alt="BitOracle Logo" 
+              className="h-10 w-auto group-hover:scale-110 transition-transform shadow-lg shadow-orange-500/10 rounded-xl"
+            />
             <h1 className="text-xl font-black tracking-tighter text-white">BITORACLE</h1>
-          </div>
+          </Link>
           
           <div className="hidden md:flex items-center gap-8 text-sm font-bold text-gray-400">
             <Link href="#" className="hover:text-white transition-colors">Technology</Link>
@@ -149,11 +153,11 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="py-12 border-t border-white/5 px-6">
-        <div className="max-w-7xl mx-auto flex flex-col md:row justify-between items-center gap-8">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gray-800 rounded-lg flex items-center justify-center font-black text-sm italic">B</div>
-            <h1 className="text-sm font-black tracking-tighter text-white">BITORACLE</h1>
-          </div>
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
+          <Link href="/" className="flex items-center gap-2 group">
+            <img src="/bitoracle-logo.png" alt="Logo" className="h-8 w-auto rounded-lg group-hover:scale-110 transition-transform" />
+            <h1 className="text-sm font-black tracking-tighter text-white uppercase">BITORACLE</h1>
+          </Link>
           <div className="flex gap-8 text-[10px] font-bold text-gray-600 uppercase tracking-widest">
             <Link href="#" className="hover:text-white transition-colors">Term of Service</Link>
             <Link href="#" className="hover:text-white transition-colors">Privacy Policy</Link>
