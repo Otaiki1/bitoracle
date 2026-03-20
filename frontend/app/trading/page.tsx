@@ -6,7 +6,7 @@ import { TradePanel } from '@/components/TradePanel';
 import { TradeList } from '@/components/TradeList';
 import { Trade } from '@/types';
 import { PriceChart } from '@/components/PriceChart';
-import { getBTCPrice, getSBTCBalance, mintSBTC } from '@/lib/stacks';
+import { getBTCPrice, getSBTCBalance, mintSBTC, getTraderTrades } from '@/lib/stacks';
 import { ResultModal } from '@/components/ResultModal';
 import { ChevronDown, Globe, Zap, TrendingUp, TrendingDown, Plus } from 'lucide-react';
 
@@ -34,10 +34,41 @@ function Dashboard() {
         });
       }
 
-      // Fetch Balance
+      // Fetch Balance & Trades
       if (address) {
-        const bal = await getSBTCBalance(address);
+        const [bal, onChainTrades] = await Promise.all([
+          getSBTCBalance(address),
+          getTraderTrades(address)
+        ]);
+        
         setBalance(bal);
+        
+        // Merge on-chain trades with existing ones
+        // On-chain trades have real IDs and status.
+        // We keep optimistic trades that haven't appeared on-chain yet.
+        setActiveTrades(prev => {
+          const now = Math.floor(Date.now() / 1000);
+          const blockDiff = (b: number) => (b > 0 ? (now - (16440000 - b) * 5) : now); // dummy fallback for testnet time
+
+          const onChainTradesWithTime = onChainTrades.map(t => ({
+            ...t,
+            // Estimate time based on block height (5s per block approx)
+            entryTime: t.entryTime || (now - (300 - (t.entryBlock % 300)) * 5) 
+          }));
+
+          const stillOptimistic = prev.filter(t => t.id >= 1000000);
+          
+          // Deduplicate by direction and timeframe if close in time
+          const filteredOptimistic = stillOptimistic.filter(opt => 
+            !onChainTrades.some(oc => 
+              oc.direction === opt.direction && 
+              oc.timeframe === opt.timeframe &&
+              Math.abs((oc.entryBlock || 0) - (opt.entryBlock || 0)) < 10
+            )
+          );
+
+          return [...filteredOptimistic, ...onChainTradesWithTime].sort((a, b) => b.id - a.id);
+        });
       }
     };
 

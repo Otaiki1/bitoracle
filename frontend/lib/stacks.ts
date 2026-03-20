@@ -8,6 +8,7 @@ import {
 } from '@stacks/transactions';
 import { openContractCall } from '@stacks/connect';
 import { NETWORK, CONTRACT_ADDRESS, SBTC_CONTRACT } from './constants';
+import { Trade } from '@/types';
 
 const checkConnect = () => {
   if (typeof openContractCall !== 'function') {
@@ -97,6 +98,82 @@ export async function getSBTCBalance(address: string): Promise<number> {
   } catch (e) {
     console.error('Error fetching sBTC balance', e);
     return 0;
+  }
+}
+
+export async function getTraderTrades(address: string): Promise<Trade[]> {
+  try {
+    // 1. Get total trade count for this trader
+    const countResult = await fetchCallReadOnlyFunction({
+      contractAddress: CONTRACT_ADDRESS,
+      contractName: 'bo-engine-v5',
+      functionName: 'get-trader-trade-count',
+      functionArgs: [Cl.principal(address)],
+      network: NETWORK,
+      senderAddress: address,
+    });
+
+    let count = 0;
+    if (countResult.type === ClarityType.ResponseOk && (countResult as any).value.type === ClarityType.Tuple) {
+      count = Number((countResult as any).value.data.count.value);
+    }
+    
+    if (count === 0) return [];
+
+    // 2. Fetch the last 10 trades for performance
+    const trades: Trade[] = [];
+    const startIndex = Math.max(0, count - 10);
+    
+    for (let i = count - 1; i >= startIndex; i--) {
+      // Get trade-id at index
+      const idResult = await fetchCallReadOnlyFunction({
+        contractAddress: CONTRACT_ADDRESS,
+        contractName: 'bo-engine-v5',
+        functionName: 'get-trader-trade-at-index',
+        functionArgs: [Cl.principal(address), Cl.uint(i)],
+        network: NETWORK,
+        senderAddress: address,
+      });
+
+      if (idResult.type === ClarityType.OptionalSome && (idResult as any).value.type === ClarityType.Tuple) {
+        const tradeId = (idResult as any).value.data['trade-id'].value;
+        
+        // Get full trade data
+        const tradeResult = await fetchCallReadOnlyFunction({
+          contractAddress: CONTRACT_ADDRESS,
+          contractName: 'bo-engine-v5',
+          functionName: 'get-trade',
+          functionArgs: [Cl.uint(tradeId)],
+          network: NETWORK,
+          senderAddress: address,
+        });
+
+        if (tradeResult.type === ClarityType.OptionalSome && (tradeResult as any).value.type === ClarityType.Tuple) {
+          const t = (tradeResult as any).value.data;
+          trades.push({
+            id: Number(tradeId),
+            trader: t.trader.value || '',
+            direction: t.direction.type === ClarityType.BoolTrue,
+            stake: BigInt(t.stake.value),
+            entryPrice: BigInt(t['entry-price'].value),
+            closePrice: BigInt(t['close-price'].value),
+            entryBlock: Number(t['entry-block'].value),
+            expiryBlock: Number(t['expiry-block'].value),
+            timeframe: Number(t.timeframe.value),
+            payoutRate: Number(t['payout-rate'].value),
+            status: Number(t.status.value),
+            payoutAmount: BigInt(t['payout-amount'].value),
+            claimed: t.claimed.type === ClarityType.BoolTrue,
+            // Approximations for UI based on block height if needed, 
+            // but for history we primarily care about final status
+          });
+        }
+      }
+    }
+    return trades;
+  } catch (e) {
+    console.error('Error fetching trade history', e);
+    return [];
   }
 }
 
