@@ -16,30 +16,28 @@ interface WalletContextType {
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
 
 export function WalletProvider({ children }: { children: React.ReactNode }) {
-  const appConfig = new AppConfig(['store_write', 'publish_data']);
-  const userSession = new UserSession({ appConfig });
+  const [userSession, setUserSession] = useState<UserSession | null>(null);
   const [userData, setUserData] = useState<any | null>(null);
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
-    if (userSession.isUserSignedIn()) {
-      setUserData(userSession.loadUserData());
+    const appConfig = new AppConfig(['store_write', 'publish_data']);
+    const session = new UserSession({ appConfig });
+    setUserSession(session);
+    
+    if (session.isUserSignedIn()) {
+      setUserData(session.loadUserData());
       setConnected(true);
     }
   }, []);
 
   const connect = () => {
+    if (!userSession) return;
     console.log('Attempting to connect wallet...');
-    if (typeof authenticate !== 'function') {
-      console.error('authenticate is not a function!', authenticate);
-      return;
-    }
+    if (typeof authenticate !== 'function') return;
     
     authenticate({
-      appDetails: {
-        name: 'BitOracle',
-        icon: '/logo.png',
-      },
+      appDetails: { name: 'BitOracle', icon: '/bitoracle-logo.png' },
       redirectTo: '/',
       onFinish: () => {
         setUserData(userSession.loadUserData());
@@ -50,17 +48,17 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   };
 
   const disconnect = () => {
-    userSession.signUserOut();
+    userSession?.signUserOut();
     setUserData(null);
     setConnected(false);
   };
 
-  const address = connected 
+  const address = (connected && userData)
     ? (NETWORK.chainId === 1 ? userData.profile.stxAddress.mainnet : userData.profile.stxAddress.testnet) 
     : null;
 
   return (
-    <WalletContext.Provider value={{ userSession, userData, connected, connect, disconnect, address }}>
+    <WalletContext.Provider value={{ userSession: userSession!, userData, connected, connect, disconnect, address }}>
       {children}
     </WalletContext.Provider>
   );

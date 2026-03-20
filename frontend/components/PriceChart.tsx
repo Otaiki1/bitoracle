@@ -10,7 +10,7 @@ interface PriceChartProps {
   trades?: Trade[];
 }
 
-export function PriceChart({ data, trades }: PriceChartProps) {
+export default function PriceChart({ data, trades }: PriceChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<any>(null);

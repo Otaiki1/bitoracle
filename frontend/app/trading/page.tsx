@@ -6,7 +6,9 @@ import { WalletProvider, useWallet } from '@/components/WalletProvider';
 import { TradePanel } from '@/components/TradePanel';
 import { TradeList } from '@/components/TradeList';
 import { Trade } from '@/types';
-import { PriceChart } from '@/components/PriceChart';
+import dynamic from 'next/dynamic';
+
+const PriceChart = dynamic(() => import('@/components/PriceChart'), { ssr: false });
 import { getBTCPrice, getSBTCBalance, mintSBTC, getTraderTrades } from '@/lib/stacks';
 import { ResultModal } from '@/components/ResultModal';
 import { ChevronDown, Globe, Zap, TrendingUp, TrendingDown, Plus } from 'lucide-react';
@@ -19,8 +21,14 @@ function Dashboard() {
   const [currentPrice, setCurrentPrice] = useState(0);
   const [resultModal, setResultModal] = useState<{ type: 'win' | 'loss', amount: string } | null>(null);
   const [balance, setBalance] = useState(0);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
     const fetchData = async () => {
       // Fetch Price
       const price = await getBTCPrice();
@@ -125,7 +133,7 @@ function Dashboard() {
     }, 1000);
 
     return () => clearInterval(settleInterval);
-  }, [activeTrades, currentPrice]);
+  }, [activeTrades, currentPrice, mounted]);
 
   const handleTradePlaced = (direction: boolean, timeframe: number, stake: number, entryPrice: number) => {
     const lastPoint = chartData[chartData.length - 1];
@@ -133,7 +141,7 @@ function Dashboard() {
     const durationSeconds = timeframe === 1 ? 30 : timeframe === 2 ? 60 : timeframe === 3 ? 300 : 900;
     
     const newTrade: Trade = {
-      id: Math.floor(Math.random() * 10000), 
+      id: 1000000 + Math.floor(Math.random() * 9000000), 
       trader: address || '',
       direction,
       stake: BigInt(stake),
