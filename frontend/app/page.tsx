@@ -7,6 +7,7 @@ import { TradeList } from '@/components/TradeList';
 import { Trade } from '@/types';
 import { PriceChart } from '@/components/PriceChart';
 import { getBTCPrice } from '@/lib/stacks';
+import { ResultModal } from '@/components/ResultModal';
 import { ChevronDown, Globe, Zap, TrendingUp, TrendingDown } from 'lucide-react';
 
 function Dashboard() {
@@ -15,6 +16,7 @@ function Dashboard() {
   const [view, setView] = useState<'opened' | 'history'>('opened');
   const [chartData, setChartData] = useState<{ time: number; value: number }[]>([]);
   const [currentPrice, setCurrentPrice] = useState(0);
+  const [resultModal, setResultModal] = useState<{ type: 'win' | 'loss', amount: string } | null>(null);
 
   useEffect(() => {
     const fetchPrice = async () => {
@@ -55,10 +57,19 @@ function Dashboard() {
             ? currentPrice > Number(trade.entryPrice)
             : currentPrice < Number(trade.entryPrice);
           
+          const status = isWinner ? 1 : 2;
+          const payoutAmount = isWinner ? BigInt(Math.floor(Number(trade.stake) * (1 + 0.8))) : BigInt(0);
+
+          // Trigger Modal
+          setResultModal({
+            type: isWinner ? 'win' : 'loss',
+            amount: (Number(payoutAmount) / 1e8).toFixed(4)
+          });
+          
           return {
             ...trade,
-            status: isWinner ? 1 : 2,
-            payoutAmount: isWinner ? BigInt(Math.floor(Number(trade.stake) * (1 + 0.8))) : BigInt(0)
+            status,
+            payoutAmount
           };
         }
         return trade;
@@ -217,6 +228,14 @@ function Dashboard() {
           <TradePanel onTradePlaced={handleTradePlaced} />
         </div>
       </section>
+
+      {resultModal && (
+        <ResultModal 
+          type={resultModal.type}
+          amount={resultModal.amount}
+          onClose={() => setResultModal(null)}
+        />
+      )}
 
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar {
