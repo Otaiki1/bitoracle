@@ -1,265 +1,167 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { WalletProvider, useWallet } from '@/components/WalletProvider';
-import { TradePanel } from '@/components/TradePanel';
-import { TradeList } from '@/components/TradeList';
-import { Trade } from '@/types';
-import { PriceChart } from '@/components/PriceChart';
-import { getBTCPrice } from '@/lib/stacks';
-import { ResultModal } from '@/components/ResultModal';
-import { ChevronDown, Globe, Zap, TrendingUp, TrendingDown } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { ArrowRight, Zap, Shield, TrendingUp, Globe, ChevronRight } from 'lucide-react';
 
-function Dashboard() {
-  const { connected, connect, address } = useWallet();
-  const [activeTrades, setActiveTrades] = useState<Trade[]>([]);
-  const [view, setView] = useState<'opened' | 'history'>('opened');
-  const [chartData, setChartData] = useState<{ time: number; value: number }[]>([]);
-  const [currentPrice, setCurrentPrice] = useState(0);
-  const [resultModal, setResultModal] = useState<{ type: 'win' | 'loss', amount: string } | null>(null);
+export default function LandingPage() {
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    const fetchPrice = async () => {
-      const price = await getBTCPrice();
-      if (price > 0) {
-        const val = price / 1e8;
-        setCurrentPrice(price);
-        setChartData(prev => {
-          const lastPoint = prev[prev.length - 1];
-          const now = Math.floor(Date.now() / 1000);
-          
-          if (lastPoint && lastPoint.time === now) {
-            return prev;
-          }
-          
-          const newPoint = { time: now, value: val };
-          return [...prev, newPoint].slice(-100);
-        });
-      }
-    };
-
-    fetchPrice();
-    const interval = setInterval(fetchPrice, 5000);
-    return () => clearInterval(interval);
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Settlement Logic: Check and settle trades locally
-  useEffect(() => {
-    const settleInterval = setInterval(() => {
-      const now = Math.floor(Date.now() / 1000);
-      let changed = false;
-
-      const updatedTrades = activeTrades.map(trade => {
-        if (trade.status === 0 && trade.expiryTime && now >= trade.expiryTime) {
-          changed = true;
-          // Determine outcome
-          const isWinner = trade.direction 
-            ? currentPrice > Number(trade.entryPrice)
-            : currentPrice < Number(trade.entryPrice);
-          
-          const status = isWinner ? 1 : 2;
-          const payoutAmount = isWinner ? BigInt(Math.floor(Number(trade.stake) * (1 + 0.8))) : BigInt(0);
-
-          // Trigger Modal
-          setResultModal({
-            type: isWinner ? 'win' : 'loss',
-            amount: (Number(payoutAmount) / 1e8).toFixed(4)
-          });
-          
-          return {
-            ...trade,
-            status,
-            payoutAmount
-          };
-        }
-        return trade;
-      });
-
-      if (changed) {
-        setActiveTrades(updatedTrades);
-      }
-    }, 1000);
-
-    return () => clearInterval(settleInterval);
-  }, [activeTrades, currentPrice]);
-
-  const handleTradePlaced = (direction: boolean, timeframe: number, stake: number, entryPrice: number) => {
-    const lastPoint = chartData[chartData.length - 1];
-    const entryTime = lastPoint ? lastPoint.time : Math.floor(Date.now() / 1000);
-    const durationSeconds = timeframe === 1 ? 30 : timeframe === 2 ? 60 : timeframe === 3 ? 300 : 900;
-    
-    const newTrade: Trade = {
-      id: Math.floor(Math.random() * 10000), 
-      trader: address || '',
-      direction,
-      stake: BigInt(stake),
-      entryPrice: BigInt(entryPrice),
-      closePrice: BigInt(0),
-      entryBlock: 0,
-      expiryBlock: 0,
-      timeframe,
-      payoutRate: 80,
-      status: 0,
-      payoutAmount: BigInt(0),
-      claimed: false,
-      entryTime: entryTime,
-      expiryTime: entryTime + durationSeconds,
-    };
-
-    setActiveTrades(prev => [newTrade, ...prev]);
-  };
-
-  const filteredTrades = activeTrades.filter(t => 
-    view === 'opened' ? t.status === 0 : t.status !== 0
-  );
-
   return (
-    <main className="min-h-screen bg-[#060709] text-white p-4 md:p-8 selection:bg-orange-500/30 font-sans">
-      {/* Background Gradients */}
+    <div className="min-h-screen bg-[#060709] text-white selection:bg-orange-500/30 overflow-x-hidden">
+      {/* Background Effects */}
       <div className="fixed top-0 left-0 w-full h-full overflow-hidden pointer-events-none -z-10">
-        <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-blue-600/5 blur-[120px] rounded-full" />
-        <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-orange-600/5 blur-[120px] rounded-full" />
+        <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-blue-600/10 blur-[150px] rounded-full" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[70%] h-[70%] bg-orange-600/10 blur-[150px] rounded-full" />
+        <div className="absolute top-[30%] left-[20%] w-[40%] h-[40%] bg-purple-600/5 blur-[120px] rounded-full" />
       </div>
 
-      <header className="flex justify-between items-center mb-8 relative z-10">
-        <div className="flex items-center gap-8">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center font-black text-xl italic shadow-lg shadow-orange-500/20">B</div>
-            <div>
-              <h1 className="text-xl font-black tracking-tighter text-white leading-none">BITORACLE</h1>
-              <p className="text-[10px] text-gray-500 font-bold tracking-widest uppercase mt-1">Binary Protocol</p>
-            </div>
+      {/* Navbar */}
+      <nav className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${
+        scrolled ? 'bg-[#060709]/80 backdrop-blur-xl border-b border-white/5 py-4' : 'bg-transparent py-6'
+      }`}>
+        <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
+          <div className="flex items-center gap-2 group cursor-pointer">
+            <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center font-black text-xl italic shadow-lg shadow-orange-500/20 group-hover:scale-110 transition-transform">B</div>
+            <h1 className="text-xl font-black tracking-tighter text-white">BITORACLE</h1>
+          </div>
+          
+          <div className="hidden md:flex items-center gap-8 text-sm font-bold text-gray-400">
+            <Link href="#" className="hover:text-white transition-colors">Technology</Link>
+            <Link href="#" className="hover:text-white transition-colors">Security</Link>
+            <Link href="#" className="hover:text-white transition-colors">Community</Link>
           </div>
 
-          <nav className="hidden lg:flex items-center gap-1 bg-gray-900/50 p-1 rounded-xl border border-gray-800/50">
-             <button className="px-4 py-2 bg-gray-800 text-white rounded-lg text-xs font-bold shadow-sm transition-all flex items-center gap-2">
-               <Zap size={14} className="text-orange-500" />
-               Trading
-             </button>
-             <button className="px-4 py-2 text-gray-500 hover:text-gray-300 rounded-lg text-xs font-bold transition-all">Orders</button>
-             <button className="px-4 py-2 text-gray-500 hover:text-gray-300 rounded-lg text-xs font-bold transition-all">Finance</button>
-          </nav>
+          <Link 
+            href="/trading" 
+            className="bg-white text-black px-6 py-2.5 rounded-xl font-black text-xs shadow-xl hover:scale-105 active:scale-95 transition-all"
+          >
+            LAUNCH APP
+          </Link>
         </div>
-        
-        <div className="flex items-center gap-4">
-          <div className="bg-gray-900/50 border border-gray-800/50 rounded-xl px-4 py-2 flex items-center gap-3">
-             <div className="flex flex-col items-end">
-                <span className="text-[9px] text-gray-600 font-black uppercase">Balance</span>
-                <span className="text-sm font-mono font-bold text-white">0.0000 <span className="text-orange-500">sBTC</span></span>
-             </div>
-             <button className="bg-orange-500 hover:bg-orange-400 p-2 rounded-lg transition-all">
-                <Globe size={16} />
-             </button>
+      </nav>
+
+      {/* Hero Section */}
+      <section className="relative pt-40 pb-20 md:pt-60 md:pb-40 px-6">
+        <div className="max-w-7xl mx-auto text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-900/50 border border-white/5 text-[10px] font-bold uppercase tracking-widest text-orange-500 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+            V1.0 NOW LIVE ON TESTNET
           </div>
 
-          {connected ? (
-            <div className="flex items-center gap-3 bg-gray-900/50 border border-gray-800/50 rounded-xl px-4 py-2">
-              <div className="flex flex-col items-end">
-                <span className="text-[9px] text-gray-500 font-black uppercase">Account</span>
-                <span className="text-xs font-mono font-bold">{address?.slice(0,6)}...{address?.slice(-4)}</span>
-              </div>
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 border border-gray-700" />
-            </div>
-          ) : (
-            <button 
-              onClick={connect}
-              className="bg-white text-black px-6 py-2.5 rounded-xl font-black text-xs shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all"
+          <h2 className="text-6xl md:text-8xl font-black italic tracking-tighter mb-8 leading-[0.9] text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-500 max-w-4xl mx-auto">
+            PREDICT THE FUTURE OF <span className="text-orange-500">BITCOIN.</span>
+          </h2>
+
+          <p className="text-gray-400 text-lg md:text-xl max-w-2xl mx-auto mb-12 font-medium leading-relaxed">
+            BitOracle brings institutional-grade binary trading to Stacks. Trade BTC price action with lightning settlement, powered by Pyth and sBTC.
+          </p>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
+            <Link 
+              href="/trading" 
+              className="w-full sm:w-auto bg-orange-500 hover:bg-orange-400 text-white px-10 py-5 rounded-[2rem] font-black text-lg shadow-2xl shadow-orange-500/20 transition-all hover:scale-[1.02] flex items-center justify-center gap-3"
             >
-              CONNECT
+              START TRADING <ArrowRight size={20} />
+            </Link>
+            <button className="w-full sm:w-auto bg-gray-900 border border-white/5 hover:border-white/10 text-white px-10 py-5 rounded-[2rem] font-black text-lg transition-all flex items-center justify-center gap-3">
+              VIEW DOCS <Globe size={20} className="text-gray-500" />
             </button>
-          )}
-        </div>
-      </header>
-
-      <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 relative z-10 h-[calc(100vh-140px)]">
-        <div className="lg:col-span-8 xl:col-span-9 flex flex-col gap-6">
-          <div className="bg-gray-900/30 border border-gray-800/50 rounded-[2rem] flex-1 relative group overflow-hidden flex flex-col">
-             {/* Dynamic Toolbar */}
-             <div className="p-4 border-b border-gray-800/50 flex justify-between items-center bg-gray-900/20">
-                <div className="flex items-center gap-4">
-                  <button className="flex items-center gap-3 bg-gray-800/50 hover:bg-gray-800 border border-gray-700/50 px-4 py-2 rounded-xl transition-all">
-                    <div className="p-1.5 bg-orange-500/20 text-orange-500 rounded-lg">
-                      <Zap size={14} />
-                    </div>
-                    <span className="text-sm font-bold">BTC / USD</span>
-                    <ChevronDown size={14} className="text-gray-500" />
-                  </button>
-                  <div className="h-6 w-px bg-gray-800" />
-                  <div className="flex items-center gap-4">
-                     <span className="text-xs font-mono font-bold text-green-500">${(currentPrice / 1e8).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                     <span className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">Live Feed (Pyth)</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button className="p-2 text-gray-500 hover:text-white transition-all"><Globe size={18} /></button>
-                </div>
-             </div>
-
-             <div className="flex-1 p-2 relative">
-                <PriceChart data={chartData} trades={activeTrades} />
-             </div>
           </div>
 
-          <div className="h-[200px] flex flex-col gap-4">
-            <div className="flex items-center justify-between px-4">
-              <h2 className="text-sm font-black text-gray-500 uppercase tracking-widest">Trades Overview</h2>
-              <div className="flex gap-4">
-                <button 
-                  onClick={() => setView('opened')}
-                  className={`text-[10px] font-black uppercase pb-1 transition-all ${view === 'opened' ? 'text-orange-500 border-b-2 border-orange-500' : 'text-gray-600 hover:text-gray-400'}`}
-                >
-                  Opened
-                </button>
-                <button 
-                  onClick={() => setView('history')}
-                  className={`text-[10px] font-black uppercase pb-1 transition-all ${view === 'history' ? 'text-orange-500 border-b-2 border-orange-500' : 'text-gray-600 hover:text-gray-400'}`}
-                >
-                  History
-                </button>
-              </div>
-            </div>
-            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
-              <TradeList trades={filteredTrades} />
-            </div>
+          <div className="mt-24 relative max-w-5xl mx-auto rounded-[3rem] overflow-hidden border border-white/5 shadow-2xl shadow-black">
+             <div className="absolute inset-0 bg-gradient-to-t from-[#060709] via-transparent to-transparent z-10" />
+             <img 
+               src="https://images.unsplash.com/photo-1639762681485-074b7f938ba0?q=80&w=2832&auto=format&fit=crop" 
+               alt="BitOracle Interface" 
+               className="w-full h-auto opacity-50 contrast-125 saturate-50"
+             />
+             <div className="absolute inset-0 flex items-center justify-center z-20">
+                <div className="bg-orange-500/10 backdrop-blur-md border border-orange-500/30 p-8 rounded-[2.5rem] flex flex-col items-center">
+                   <div className="flex items-center gap-4 mb-2">
+                      <span className="text-6xl font-black font-mono tracking-tighter">$72,401.50</span>
+                      <div className="p-2 bg-green-500/20 text-green-500 rounded-xl">
+                         <TrendingUp size={24} />
+                      </div>
+                   </div>
+                   <p className="text-gray-400 font-bold uppercase tracking-[0.2em] text-[10px]">Real-time BTC Oracle Feed</p>
+                </div>
+             </div>
           </div>
-        </div>
-
-        <div className="lg:col-span-4 xl:col-span-3">
-          <TradePanel onTradePlaced={handleTradePlaced} />
         </div>
       </section>
 
-      {resultModal && (
-        <ResultModal 
-          type={resultModal.type}
-          amount={resultModal.amount}
-          onClose={() => setResultModal(null)}
-        />
-      )}
+      {/* Features Section */}
+      <section className="py-20 px-6 relative">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="bg-gray-900/30 border border-white/5 p-10 rounded-[2.5rem] hover:border-orange-500/30 transition-all group">
+              <div className="w-14 h-14 bg-orange-500/10 text-orange-500 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
+                <Zap size={28} />
+              </div>
+              <h3 className="text-2xl font-black italic tracking-tighter mb-4">Instant Settlement</h3>
+              <p className="text-gray-500 font-medium leading-relaxed">
+                Binary positions settle the microsecond the timeframe expires. High frequency trading, perfected for Bitcoin.
+              </p>
+            </div>
 
-      <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #1f2937;
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #374151;
-        }
-      `}</style>
-    </main>
-  );
-}
+            <div className="bg-gray-900/30 border border-white/5 p-10 rounded-[2.5rem] hover:border-blue-500/30 transition-all group">
+              <div className="w-14 h-14 bg-blue-500/10 text-blue-500 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
+                <Shield size={28} />
+              </div>
+              <h3 className="text-2xl font-black italic tracking-tighter mb-4">Secured by sBTC</h3>
+              <p className="text-gray-500 font-medium leading-relaxed">
+                BitOracle runs natively on Stacks, utilizing the security and programmability of Bitcoin's premier layer.
+              </p>
+            </div>
 
-export default function Home() {
-  return (
-    <WalletProvider>
-      <Dashboard />
-    </WalletProvider>
+            <div className="bg-gray-900/30 border border-white/5 p-10 rounded-[2.5rem] hover:border-green-500/30 transition-all group">
+              <div className="w-14 h-14 bg-green-500/10 text-green-500 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
+                <Globe size={28} />
+              </div>
+              <h3 className="text-2xl font-black italic tracking-tighter mb-4">Pyth Network Oracles</h3>
+              <p className="text-gray-500 font-medium leading-relaxed">
+                Institutional price feeds ensure every trade is fair, accurate, and resistant to market manipulation.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Trust Quote */}
+      <section className="py-20 px-6">
+        <div className="max-w-3xl mx-auto text-center">
+            <h2 className="text-3xl md:text-4xl font-black italic tracking-tighter leading-tight mb-8">
+              "BitOracle combines the reliability of Bitcoin with the speed of decentralized binary options."
+            </h2>
+            <div className="flex items-center justify-center gap-3">
+               <div className="w-8 h-8 rounded-full bg-orange-500" />
+               <span className="font-bold text-sm tracking-widest uppercase">The Genesis Team</span>
+            </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="py-12 border-t border-white/5 px-6">
+        <div className="max-w-7xl mx-auto flex flex-col md:row justify-between items-center gap-8">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-gray-800 rounded-lg flex items-center justify-center font-black text-sm italic">B</div>
+            <h1 className="text-sm font-black tracking-tighter text-white">BITORACLE</h1>
+          </div>
+          <div className="flex gap-8 text-[10px] font-bold text-gray-600 uppercase tracking-widest">
+            <Link href="#" className="hover:text-white transition-colors">Term of Service</Link>
+            <Link href="#" className="hover:text-white transition-colors">Privacy Policy</Link>
+            <Link href="#" className="hover:text-white transition-colors">Github</Link>
+          </div>
+          <p className="text-[10px] text-gray-700 font-bold uppercase tracking-widest">© 2026 BitOracle Binary Protocol</p>
+        </div>
+      </footer>
+    </div>
   );
 }
