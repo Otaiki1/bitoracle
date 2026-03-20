@@ -6,9 +6,9 @@ import { TradePanel } from '@/components/TradePanel';
 import { TradeList } from '@/components/TradeList';
 import { Trade } from '@/types';
 import { PriceChart } from '@/components/PriceChart';
-import { getBTCPrice } from '@/lib/stacks';
+import { getBTCPrice, getSBTCBalance, mintSBTC } from '@/lib/stacks';
 import { ResultModal } from '@/components/ResultModal';
-import { ChevronDown, Globe, Zap, TrendingUp, TrendingDown } from 'lucide-react';
+import { ChevronDown, Globe, Zap, TrendingUp, TrendingDown, Plus } from 'lucide-react';
 
 function Dashboard() {
   const { connected, connect, address } = useWallet();
@@ -17,9 +17,11 @@ function Dashboard() {
   const [chartData, setChartData] = useState<{ time: number; value: number }[]>([]);
   const [currentPrice, setCurrentPrice] = useState(0);
   const [resultModal, setResultModal] = useState<{ type: 'win' | 'loss', amount: string } | null>(null);
+  const [balance, setBalance] = useState(0);
 
   useEffect(() => {
-    const fetchPrice = async () => {
+    const fetchData = async () => {
+      // Fetch Price
       const price = await getBTCPrice();
       if (price > 0) {
         const val = price / 1e8;
@@ -27,21 +29,31 @@ function Dashboard() {
         setChartData(prev => {
           const lastPoint = prev[prev.length - 1];
           const now = Math.floor(Date.now() / 1000);
-          
-          if (lastPoint && lastPoint.time === now) {
-            return prev;
-          }
-          
-          const newPoint = { time: now, value: val };
-          return [...prev, newPoint].slice(-100);
+          if (lastPoint && lastPoint.time === now) return prev;
+          return [...prev, { time: now, value: val }].slice(-100);
         });
+      }
+
+      // Fetch Balance
+      if (address) {
+        const bal = await getSBTCBalance(address);
+        setBalance(bal);
       }
     };
 
-    fetchPrice();
-    const interval = setInterval(fetchPrice, 5000);
+    fetchData();
+    const interval = setInterval(fetchData, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [address]);
+
+  const handleFaucet = async () => {
+    if (!address) return;
+    try {
+      await mintSBTC(100000000, address); // Mint 1 sBTC
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   // Settlement Logic: Check and settle trades locally
   useEffect(() => {
@@ -156,10 +168,15 @@ function Dashboard() {
           <div className="bg-gray-900/50 border border-gray-800/50 rounded-xl px-4 py-2 flex items-center gap-3">
              <div className="flex flex-col items-end">
                 <span className="text-[9px] text-gray-600 font-black uppercase">Balance</span>
-                <span className="text-sm font-mono font-bold text-white">0.0000 <span className="text-orange-500">sBTC</span></span>
+                <span className="text-sm font-mono font-bold text-white">{(balance / 1e8).toFixed(4)} <span className="text-orange-500">sBTC</span></span>
              </div>
-             <button className="bg-orange-500 hover:bg-orange-400 p-2 rounded-lg transition-all">
-                <Globe size={16} />
+             <button 
+               onClick={handleFaucet}
+               className="bg-orange-500 hover:bg-orange-400 p-2 rounded-lg transition-all flex items-center gap-1 group"
+               title="Get mock sBTC"
+             >
+                <Plus size={16} className="group-hover:rotate-90 transition-transform" />
+                <span className="text-[10px] font-black hidden lg:block">FAUCET</span>
              </button>
           </div>
 

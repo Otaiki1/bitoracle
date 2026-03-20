@@ -1,13 +1,10 @@
-// lib/stacks.ts
 import { 
-  makeContractCall, 
-  uintCV, 
-  boolCV,
+  Cl,
+  Pc,
+  fetchCallReadOnlyFunction,
   AnchorMode, 
   PostConditionMode, 
-  FungibleConditionCode, 
-  createAsset,
-  Pc
+  ClarityType
 } from '@stacks/transactions';
 import { openContractCall } from '@stacks/connect';
 import { NETWORK, CONTRACT_ADDRESS, SBTC_CONTRACT } from './constants';
@@ -28,14 +25,8 @@ export async function placeTrade(
   entryPrice: number,
   userAddress: string
 ): Promise<void> {
-
-  const sBTCAsset = 'ST1KA46BB5FK702F47BFKJ13BBVTKPV8SV0YC4QR7.bo-sbtc-v5' as `${string}.${string}`;
-  console.log('STUB: sBTCAsset:', sBTCAsset);
-  console.log('STUB: tokenName:', SBTC_CONTRACT.tokenName);
-  console.log('STUB: amountSats:', stakeSats);
-
   const postConditions = [
-    Pc.principal(userAddress).willSendEq(BigInt(stakeSats)).ft('ST1KA46BB5FK702F47BFKJ13BBVTKPV8SV0YC4QR7.bo-sbtc-v5', 'sbtc')
+    Pc.principal(userAddress).willSendEq(BigInt(stakeSats)).ft(`${SBTC_CONTRACT.address}.${SBTC_CONTRACT.name}` as `${string}.${string}`, 'sbtc')
   ];
 
   if (!checkConnect()) return;
@@ -46,10 +37,10 @@ export async function placeTrade(
     contractName: 'bo-engine-v5',
     functionName: 'place-trade',
     functionArgs: [
-      boolCV(direction),
-      uintCV(timeframe),
-      uintCV(stakeSats),
-      uintCV(entryPrice),
+      Cl.bool(direction),
+      Cl.uint(timeframe),
+      Cl.uint(stakeSats),
+      Cl.uint(entryPrice),
     ],
     postConditions,
     postConditionMode: PostConditionMode.Deny,
@@ -57,10 +48,56 @@ export async function placeTrade(
     onFinish: (data) => {
       console.log('Trade broadcasted:', data.txId);
     },
-    onCancel: () => {
-      console.log('Trade cancelled');
-    },
   });
+}
+
+export async function mintSBTC(amount: number, recipient: string) {
+  const transaction = {
+    contractAddress: SBTC_CONTRACT.address,
+    contractName: SBTC_CONTRACT.name,
+    functionName: 'mint',
+    functionArgs: [
+      Cl.uint(amount),
+      Cl.principal(recipient)
+    ],
+    network: NETWORK,
+    onFinish: (data: any) => {
+      console.log('STUB: Mint finished', data);
+    },
+  };
+
+  await openContractCall(transaction);
+}
+
+export async function getSBTCBalance(address: string): Promise<number> {
+  try {
+    const result = await fetchCallReadOnlyFunction({
+      contractAddress: SBTC_CONTRACT.address,
+      contractName: SBTC_CONTRACT.name,
+      functionName: 'get-balance',
+      functionArgs: [Cl.principal(address)],
+      network: NETWORK,
+      senderAddress: address,
+    });
+
+    // SIP-010 get-balance returns (ok uint)
+    if (result.type === ClarityType.ResponseOk) {
+      const inner = result.value;
+      if (inner.type === ClarityType.UInt) {
+        return Number(inner.value);
+      }
+    }
+    
+    // Fallback for direct uint (though less likely)
+    if (result.type === ClarityType.UInt) {
+      return Number(result.value);
+    }
+    
+    return 0;
+  } catch (e) {
+    console.error('Error fetching sBTC balance', e);
+    return 0;
+  }
 }
 
 export async function getBTCPrice(): Promise<number> {
